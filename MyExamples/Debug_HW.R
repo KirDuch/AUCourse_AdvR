@@ -1,12 +1,13 @@
 #------------------------------------------
-# Locating the error line with traceback
+# Introduction to Debugging
 #------------------------------------------
 ## T: suggests you to test somthing yourself. 
 # This will not necessarily be described in details here but can somtimes be found in [HW],
 # together with a more detailed describtion.
-
-#The following function may not be necessary for all users, it should be default in Rstudio
-traceback()
+#
+##NOTE: will be used for things you should pay attention to or be aware about.
+#
+## AI: will be used for additional information not discussed further here.
 
 # An example of an error 
 f <- function(a) g(a)
@@ -15,7 +16,8 @@ h <- function(c) i(c)
 i <- function(d) "a" + d #The error is here
 f(10)
 
-# Choose 'Show Traceback' to see where R runs into an error. We see:
+# Choose 'Show Traceback' in console (if not visable go to Debug -> On error -> 
+# Error inspect) or write traceback() to see where R runs into an error. We see:
 # 4. i(c) 
 # 3. h(b) 
 # 2. g(a) 
@@ -48,6 +50,7 @@ fac <- function(x){
   for (n in 1:x){
     y <- y*n
   }
+  return(y)
 }
 fac(4)
 
@@ -62,20 +65,21 @@ fac(4)
 # Add browser without adding it manualy.
 
 # Run the following code
-fac <- function(x){
+fac1 <- function(x){
   y <- 1
   for (n in 1:x){
     y <- y*n
   }
+  return(y)
 }
 
 # Eksemples:
-debugonce(fac()) #without argument
-debugonce(fac(10)) #with argument
+debugonce(fac1()) #without argument
+debugonce(fac1(10)) #with argument
 
-debug(fac) #inset browser() in first line of function
-fac(4)
-undebug(fac) #Remove browser again
+debug(fac1) #inset browser() in first line of function
+fac1(4)
+undebug(fac1) #Remove browser again
 
 #We can do the same with functions we cannot source
 debug(mean)
@@ -85,7 +89,48 @@ undebug(mean)
 ##T4: Try this out with one of your own functions or an existing R-function.
 #NOTE: when using debug() remember to undebug() again. 
 
-# If you have a specific file and linenumber in mind you can use:
+## AI: If you have a specific file and line number in mind you can use:
 # utils::setBreakpoint(). Check out the function yourself. 
+# The :: and ::: functions is used to acces exported and internal variables. See help page
 
 #----------------------------------------------------------------------------------------
+# option()
+# option() is a function that take various arguments, as the help page illustrate. 
+# Here we shall only cover some options related to debugging and errors.
+
+
+# Specify how R should act in case of an error
+options(error=browser)
+fac1(2) #nothing happens
+#Now lets make an error
+fac2 <- function(x){
+  y <- 1
+  for (i in 1:x){
+    y <- y*n
+  }
+  return(y)
+}
+
+fac2(2) #we enter into browser
+
+options(error = NULL) #reset to default
+
+# NOTE: before setting the options, note what the default settings is, 
+# to be able to go back to default settings.
+
+options(error = recover)
+fac2(2)
+# Write 1 when R writes selection: in the console to enter the function.
+# Since the function contains only one function you cannot write other numbers at selection.
+#
+# When you get a browse response enter objects() to see the object in the function. 
+# You can see the value of theobjects as before.
+
+## T: try this out with the function f used earlier, can you select other items?
+
+options(error = NULL)
+## AI: In the [HW] you find a function that reset error=NULL after one debugging once.
+
+#-----------------------------------------------------------------------------------
+# [HW]: refer to http://adv-r.had.co.nz/Exceptions-Debugging.html#debugging-techniques (d. 4 sep 2018)
+
