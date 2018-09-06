@@ -131,6 +131,57 @@ fac2(2)
 options(error = NULL)
 ## AI: In the [HW] you find a function that reset error=NULL after one debugging once.
 
+# Sometimes your program returns a warning and not an error. This might og might not effect your specific goal,
+# but it means that R corrected a mistake to what R thinks you mean. 
+# Since errors are esier to find using debugging, you can turn warnings into errors by writing 
+# options(warn = 2)
+
 #-----------------------------------------------------------------------------------
-# [HW]: refer to http://adv-r.had.co.nz/Exceptions-Debugging.html#debugging-techniques (d. 4 sep 2018)
+# -----------------------------
+# One example of Error handling
+#------------------------------
+# Influence how R react to errors. 
+#Run the following code. As expected we see an error message
+f1 <- function(x) {
+  log(x)
+  10
+}
+f1("x")
+# Now try to run the following
+f1 <- function(x) {
+  try(log(x))
+  10
+}
+f1("x")
+
+# Do you notice a difference?
+# You should see that the second version continue to run the function even though we see an error.
+
+## T: try to replace line 13 with 
+try(log(x), silent=TRUE)
+# What do you expect to happen? What happens?
+
+try({
+  ## T: write some code with an error here  
+})
+
+# The class function can tell you if your trial succeded or failed.
+success <- try(1 + 2)
+failure <- try("a" + "b")
+class(success)
+
+# AI: accordHWing to HW there is no build in function to handling the class of errors. Here is a function that does
+# just that. For more details see [HW]
+is.error <- function(x) inherits(x, "try-error")
+succeeded <- !vapply(results, is.error, logical(1))
+#Run the following:
+elements <- list(1:10, c(-1, 10), c(TRUE, FALSE), letters)
+results <- lapply(elements, log)
+results <- lapply(elements, function(x) try(log(x)))
+
+str(results[succeeded])
+str(elements[!succeeded])
+
+
+# [HW]: refers to http://adv-r.had.co.nz/Exceptions-Debugging.html#debugging-techniques (d. 4 sep 2018)
 
