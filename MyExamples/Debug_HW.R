@@ -1,13 +1,9 @@
 #------------------------------------------
 # Introduction to Debugging
 #------------------------------------------
-## T: suggests you to test somthing yourself. 
-# This will not necessarily be described in details here but can somtimes be found in [HW],
-# together with a more detailed describtion.
-#
-##NOTE: will be used for things you should pay attention to or be aware about.
-#
-## AI: will be used for additional information not discussed further here.
+## T: implies that you should try somthing out, and a result wil not always be explained.
+## NOTE: will be used for things you should pay attention to or be aware about, and
+## AI: will be used for additional information not discussed further in this.
 
 # An example of an error 
 f <- function(a) g(a)
@@ -74,16 +70,19 @@ fac1 <- function(x){
 }
 
 # Eksemples:
-debugonce(fac1()) #without argument
-debugonce(fac1(10)) #with argument
+debugonce(fac1) #without argument
+debugonce(sample) #with argument
+
 
 debug(fac1) #inset browser() in first line of function
 fac1(4)
+fac1()
 undebug(fac1) #Remove browser again
 
 #We can do the same with functions we cannot source
 debug(mean)
 mean(1:7) #see how the mean works
+mean()
 undebug(mean)
 
 ##T4: Try this out with one of your own functions or an existing R-function.
@@ -173,11 +172,15 @@ class(success)
 # AI: accordHWing to HW there is no build in function to handling the class of errors. Here is a function that does
 # just that. For more details see [HW]
 is.error <- function(x) inherits(x, "try-error")
-succeeded <- !vapply(results, is.error, logical(1))
-#Run the following:
 elements <- list(1:10, c(-1, 10), c(TRUE, FALSE), letters)
+
 results <- lapply(elements, log)
+succeeded <- !vapply(results, is.error, logical(1))
+succeeded
+
 results <- lapply(elements, function(x) try(log(x)))
+succeeded <- !vapply(results, is.error, logical(1))
+succeeded
 
 str(results[succeeded])
 str(elements[!succeeded])
