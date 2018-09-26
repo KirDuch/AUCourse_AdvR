@@ -1,0 +1,530 @@
+---
+title: "Expressions with Rlang"
+author: "Kirsten"
+date: "25 sep 2018"
+output: beamer_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library("rlang")
+library("lobstr")
+```
+
+## Install needed packages
+```{r,eval=FALSE,echo=TRUE}
+devtools::install_github("r-lib/rlang")
+devtools::install_githu("hadley/lobstr") 
+# Rtools version 3.4 are needed for lobstr
+require("rlang","lobstr")
+```
+
+## Introduction I
+
+Save expressitions not containg values
+```{r,error=TRUE,echo=TRUE}
+y <- x * 10
+
+z <- rlang::expr(y <- x * 10)
+z
+```
+So we see, that `expr()` add quotationmarks. To evaluate the expression for a value of x, we can write
+
+## Introduction II
+```{r,echo=TRUE,results=TRUE}
+x <- 10
+l <- eval(z) 
+l
+```
+Notice that `eval()`is a scilent function so we need to assign the output to a value.
+
+## AST
+
+We have just created what we call a \textbf{quoted expression}. These are what we call \textbf{abstract syntax trees} (AST).
+
+Illustration on blackboard for a function `f(x,"y",1)`. 
+
+In AST we define.
+
+ - \textbf{Calls}, define the hierarchy of the tree.  This is mainly relevant when we consider multiple functions.
+ - \textbf{The children}, which are ordered as following: \textbf{The first child} are the function, \textbf{the subsequent children} are the arguments. 
+
+As we have learned earlier the order of the children are important.
+
+## AST II
+- \textbf{The leaves} (another name for the children), are \textbf{symbols}, that is objects without a value, such as `f`and `x` or \textbf{constants} such as `1` or `"Y"`. 
+
+## AST III
+Show the AST tree with `lobstr::ast()`
+```{r, echo=TRUE}
+lobstr::ast(f(x,"y",1))
+```
+
+Q: Run this code in R
+
+## Unquoting 
+
+We can unquote an expression using the function `!!`. 
+Try to Write the following in R, What would you expect, what do you see?
+
+```{r,echo=TRUE,eval=FALSE}
+x <- expr(f(x,"y",1))
+
+lobstr::ast(x)
+lobstr::ast(!!x)
+```
+
+## Unquoting II
+```{r,echo=TRUE}
+x <- rlang::expr(f(x,"y",1))
+
+lobstr::ast(x)
+lobstr::ast(!!x)
+```
+
+## Infix and prefix
+Try to run the following code.
+```{R,eval=FALSE,echo=TRUE}
+View(expr(y <- x*10))
+```
+You will get a detailed describtion, containing, the type of the children, the evaluation order, and the functions. You can even go through the AST tree by unfolding the different calls.
+
+## Infix and prefix
+ 
+ - \textbf{Infix form} is when a function come inbetween arguments, such as `<-` and `*` above. 
+ - \textbf{Prefix functions} are functions where the arguments come first. 
+ 
+An infix function can be turned into a prefix function 
+```{r, echo=TRUE}
+x <- 4
+y <- x * 10
+y
+`<-`(z, `*`(x, 10))
+z
+```
+
+Draw the AST on the blackboard.
+
+## Exercise 
+
+Print the AST for `names(x)<-y`.
+
+- Which calls to you make?
+- What type are the children, and what is the order of the children?
+
+Try to run `lobstr::ast(mean(x = mtcars$cyl, na.rm = TRUE))` (you might need to type `data(mtcars)` first.). 
+
+ - Can you find a infix and a prefix function.
+ - Is the output as expected?
+ 
+Other special forms that we can look at are `for()`, `if()`, `[`, `[[`,`{` and many more.
+
+## Grammar
+
+The rules that governer the trees constructed by a sequence of tokens, are called the \textbf{grammar}.
+
+This includes the order of which operations ar processed, forexample do R read `(1+2)*3` or `1+(2*3)`, if we write `1+2*3`.
+
+Q: What would you expect?
+
+- Write `lobstr::ast(1 + 2 * 3)`to find out.
+- What if we write `lobstr::ast(!x %in% y)`?
+
+If you write `lobstr::ast(1 + 2 + 3)` you see, that R is \textbf{left-associative}, meaning values on the left are evaluated first. However the exceptions that confirms the rule are `<-` and `^`. We can sometimes overrule the left associative. To see this try to consider `x + y %+% z` and `x ^ y %+% z`.
+
+## Data structure
+
+\textbf{Expressions} are used to refer to the set containing \textbf{constants, symbols, pairlists} and \textbf{calls}. 
+
+In \textbf{base R} expressions (called \textbf{expressions object} in [HW]) is a special type equivalent to a list of expressions.
+
+The expressions we will be working with are closest to the R base object called \textbf{langauge object} (including symbols and calls). The type you saw ealier when using `view()`.
+
+## Constants
+
+\textbf{Constants} occure in the leaves of AST, and are the simplest datastructure found in the AST (that is they are \textbf{atomic vectors} of length 1).
+
+Constants are self quoting since 
+```{r,echo=TRUE}
+identical(expr("x"), "x")
+identical(expr(TRUE), TRUE)
+```
+
+Q: do you think the same goes for `identical(expr(1), 1)`? Try to type it.
+
+## Symbols I
+
+\textbf{Symbols} represent variable names. We can convert back and fourth between symbols and the string that represents them.
+```{r,echo=TRUE}
+"x"
+sym("x")
+as_string(sym("x"))
+```
+
+## Symbols II
+
+We can also use syms to put the symbols in a list. 
+```{r,echo=TRUE}
+syms(c("h","hey"))
+```
+
+## Symbols III
+
+Symbols differ from string mainly in evaluation. 
+```{r,echo=TRUE,error=TRUE}
+x <- 10
+y <- "5"
+
+z<- eval(expr(f <- x*4))
+z
+y <- eval(expr(f <- y*4))
+```
+
+## Missing arguments
+
+A special symbol is the missing arguments. 
+```{r,echo=TRUE}
+rlang::missing_arg()
+rlang::type_of(missing_arg())
+rlang::as_string(missing_arg())
+```
+
+Notice that the type of `missing_arg()` is a symbol, but if we turn it into a string it contains no value. 
+
+## Mising arguments II
+
+To see if a symbol is missing, we can use 
+```{r,echo=TRUE}
+rlang::is_missing(missing_arg())
+```
+
+We can bind it to a variable `m <- missing_arg()`, what would you expect the output to be?
+
+## Missing arguments III
+
+```{r,error=TRUE, echo=TRUE}
+m <- missing_arg()
+m
+```
+
+If we instead write 
+```{r,echo=TRUE}
+mm <- list(missing_arg())
+mm[[1]]
+```
+We will not get an error or an output at all. 
+
+To be able to work with missing arguments stored in a variable we can write,
+```{r, echo=TRUE}
+rlang::maybe_missing(m)
+```
+
+## Calls
+
+\textbf{Calls} define the AST, and behave similar to a list. 
+```{r,echo=TRUE}
+x <- expr(read.table("important.csv", row = FALSE))
+
+ast(!!x)
+```
+
+## Calls II
+```{r,echo=TRUE}
+length(x) -1 # Get the number of arguments
+names(x) # Missing arguments
+c(x[[1]],x[[2]]) # Extract leaves
+x$row
+```
+
+## Extract arguments I
+
+```{r, echo=TRUE}
+rlang::call_standardise(x)
+```
+
+`call_standardise()` standardises all arguments to use the full name. However if the function uses `...` it is not possible to standardise all arguments. 
+
+## Extract arguments II
+
+Now we can extract multiple arguments 
+```{r,echo=TRUE}
+as.list(x[2:3])
+```
+It is possible to use without `as.list()`, but it is considererd good pratice.
+
+## Modify calls 
+
+```{r,echo=TRUE}
+x$header <- TRUE
+x
+```
+
+
+## Construct calls
+
+Finaly, we can construct a call from its children using `call2()`
+
+```{r,echo=TRUE}
+call2("mean", x = expr(x), na.rm = TRUE)
+call2(expr(mean), x = expr(x), na.rm = TRUE)
+
+x <- 1:10
+eval(call2(expr(mean), x = expr(x), na.rm = TRUE))
+```
+
+Q: try to construct a call using your favorite function. 
+
+## Pairlists
+\textbf{Pairlists} have mostly been replaced by lists, but will occure when working with function arguments. 
+
+```{r,echo=TRUE}
+f <- function(x = 10) x + 1
+typeof(formals(f))
+```
+
+The disadvantage is that the datastructure is a linked list instrad of a vector, so subsetting gets slower the further down the pairlist you index.
+
+## Pairlists II
+
+In C the pairlists are still used. But we can treat them as a list.
+
+```{r,echo=TRUE}
+pl <- pairlist(x = 1, y = 2)
+length(pl)
+str(pl)
+```
+
+To illustrate the disadvantage
+
+```{r, echo=TRUE}
+l1 <- as.list(1:100)
+l2 <- as.pairlist(1:100)
+```
+
+## Pairlist III
+
+`supressWarnings()` not to print the warning that the computation time of `l1[[1]]`and `l1[[100]]` are to short to measure
+
+```{r,echo=TRUE}
+suppressWarnings(microbenchmark::microbenchmark(
+  l1[[1]],
+  l1[[100]],
+  l2[[1]],
+  l2[[100]]))
+```
+
+## Expression objects. 
+
+Remember these are a equivalent to a list of expressions. 
+
+We can produce an expression object in the two following ways in base R.
+```{R,echo=TRUE}
+exp1 <- parse(text = c("
+x <- 4
+x
+"))
+exp2 <- expression(x <- 4,x)
+
+typeof(exp1)
+typeof(exp2)
+```
+
+## Expression objects II
+
+Q: Try to write `length(exp1)` and `exp1[[1]]`.
+
+If we use `eval()` on a expression object, we evaluate all expressions and thus get a list of expressions. 
+
+## Parsing and deparsing
+
+How can we evaluate an expression if it is stored as a string, lets say 
+
+```{r,echo=TRUE}
+x <- "y <- z + 7"
+lobstr::ast(!!x)
+```
+
+## Parsing I
+Using `rlang()` we can do the following
+
+```{r,echo=TRUE}
+x1 <- rlang::parse_expr(x)
+x1
+
+# With AST
+lobstr::ast(!!x1)
+```
+
+## Parsing II
+
+For multiple expressions in a string 
+```{r,echo=TRUE, eval=FALSE}
+x <- "a <- 1; a + 1"
+rlang::parse_exprs(x)
+```
+Q: What would you expect?
+
+## Parsing III
+
+```{r,echo=TRUE}
+x <- "a <- 1; a + 1"
+rlang::parse_exprs(x)
+```
+
+The basse R function equivalent to `parse_exprs()` is `parse()`.
+
+## Deparsing I
+
+```{r, echo=TRUE}
+z <- expr(y <- x + 10)
+expr_text(z)
+```
+
+With R base equivalent function being `deparse()`.
+
+## Quasiquotation
+
+\textbf{Quasiquotation} is one of the fundamental ideas that make the functions `expr()` and `ast()` work. 
+
+ - \textbf{quotation} allows us to capture AST associated with an argument.
+ 
+ - \textbf{Unquotation} allows you to selectively evaluate parts of an quoted expression.
+ 
+## Quotation I
+
+Why do we need unquoting?
+
+```{r,echo=TRUE}
+paste("It", "takes", "a","while","to","type","all","these","words")
+```
+
+## `exprs()` I
+
+The function`exprs()`makes this easier
+```{r,echo=TRUE}
+cement <- function(...) {
+  dots <- exprs(...)
+  paste(purrr::map(dots, expr_name), collapse = " ")
+}
+
+cement(now,I,can,write,the,words,without,quotation)
+```
+
+## `exprs()` II
+
+However it doesnt solve all problems
+
+```{r,echo=TRUE}
+day <- "Friday"
+
+paste("Today is",day)
+cement("Today is",day)
+```
+
+Q: Can you remember a function that might help us?
+
+## Unquoting: Introduction
+
+To solve this problem we need a function to unqoute.
+```{r,echo=TRUE}
+cement("Today is",!!day)
+```
+
+## With rlang
+4 functions, 
+
+ - `expr()` and `enexpr()`
+ - `exprs()` and `enexprs()` 
+
+We have already used `expr()`.
+```{r,echo=TRUE}
+expr(1 /2 / 3)
+```
+
+## Exercise
+What would you expect the output from the following code to be?
+```{r,echo=TRUE,eval=FALSE}
+f1 <- function(x) expr(x)
+f1(a + b + c)
+```
+
+
+## Answer
+```{r,echo=TRUE}
+f1 <- function(x) expr(x)
+f1(a + b + c)
+```
+
+## `enexpr()`
+But with `enexpr()`
+```{r,echo=TRUE}
+f1 <- function(x) enexpr(x)
+f1(a + b + c)
+```
+
+## `expres()`
+
+With `exprs()` we can evaluate a list
+```{r,echo=TRUE}
+exprs(x = x ^ 2, y = y ^ 3, z = z ^ 4)
+```
+
+## `expres()` II
+The function also returns missing arguments
+```{r,echo=TRUE}
+val <- exprs(x = )
+is_missing(val$x)
+```
+
+In conclusion use `ènexpr()` and `enexprs()` inside functions and `expr()` and `exprs()` to capture expressions. 
+
+## Exercise
+
+What does teh following code return, and why?
+```{r,echo=TRUE,eval=FALSE}
+expr({
+  x +              y # comment  
+})
+```
+
+## Answer
+```{r,echo=TRUE}
+expr({
+  x +              y # comment  
+})
+```
+
+## Unquoting: rlang
+To unquote with rlang we will use the function `!!`. 
+
+We have seen before
+```{r,echo=TRUE}
+x <- expr(a + b + c)
+expr(f(!!x, y))
+```
+
+Diagram of AST?
+
+## Unquoting: rlang II
+
+What happens if we write
+```{r,echo=TRUE}
+x <- exprs(1, 2, 3, y = 10)
+expr(f(!!x, z = z))
+expr(f(!!!x, z = z))
+```
+ !!! takes a list of expressions and insert them at the location of `!!!`.
+ 
+## Problems with `!!!`
+
+```{r,echo=TRUE}
+x <- 100
+head(mtcars$cyl,7)
+head(with(mtcars, cyl + !!x),7)
+head(with(mtcars, cyl + !x),7)
+```
+
+Q: What woud you expect to get if we wrote `!!!x` instea?
+
+## Additional
+`rlang::eval_bare()` is another relevant function if you want to evaluate an expression.
